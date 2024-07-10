@@ -181,22 +181,13 @@ if __name__ == '__main__':
         #
         mpu_labels = ['a_x','a_y','a_z'] # gyro labels for plots
         cal_size = 1000 # number of points to use for calibration 
-        #accel_coeffs = accel_cal() # grab accel coefficients
-        #print(accel_coeffs)
+        accel_coeffs = accel_cal() # grab accel coefficients
+        print(accel_coeffs)
 #
         ###################################
         # Record new data 
         ###################################
         #
-        #data = np.array([get_accel() for ii in range(0,cal_size)]) # new values
-        #
-        old_vals_bool=True
-        if not old_vals_bool:
-            accel_coeffs = accel_cal() # grab accel coefficients
-        else:
-            accel_coeffs = [np.array([0.99909876, 0.01132312]),
-                            np.array([-0.99893015, -0.0091835 ]),
-                            np.array([-0.98948227,  0.02932166])]
 #
         ###################################
         # Record new data 
@@ -205,9 +196,22 @@ if __name__ == '__main__':
         ser.write(b'|')
         data = np.array([get_accel() for ii in range(0,cal_size)]) # new values
         ser.write(b'|')
-        #
-        ###################################
-        # integration over time
-        ###################################
-        #
-        imu_integrator()
+        
+        accel_labels = ['a_x','a_y','a_z']
+
+        plt.style.use('ggplot')
+        fig,axs = plt.subplots(2,1,figsize=(12,9))
+        for ii in range(0,3):
+            axs[0].plot(data[:,ii],
+                        label='${}$, Uncalibrated'.format(accel_labels[ii]))
+            axs[1].plot(accel_fit(data[:,ii],*accel_coeffs[ii]),
+                        label='${}$, Calibrated'.format(accel_labels[ii]))
+        axs[0].legend(fontsize=14);axs[1].legend(fontsize=14)
+        axs[0].set_ylabel('$a_{x,y,z}$ [g]',fontsize=18)
+        axs[1].set_ylabel('$a_{x,y,z}$ [g]',fontsize=18)
+        axs[1].set_xlabel('Sample',fontsize=18)
+        axs[0].set_ylim([-2,2]);axs[1].set_ylim([-2,2])
+        axs[0].set_title('Accelerometer Calibration Calibration Correction',fontsize=18)
+        fig.savefig('accel_calibration_output.png',dpi=300,
+                    bbox_inches='tight',facecolor='#FCFCFC')
+        fig.show()

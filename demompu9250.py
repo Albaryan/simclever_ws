@@ -4,75 +4,37 @@ import numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from pygame.locals import *
-from ahrs.filters import EKF
-from ahrs.common.orientation import acc2q
-from ahrs.common.quaternion import Quaternion
-from ahrs import RAD2DEG
-from ahrs import DCM
-import serial,time
-import serial
 
 useSerial = True # set true for using serial for data transmission, false for wifi
 useQuat = False   # set true for using quaternions, false for using y,p,r angles
 
 
-
+import serial
+ser = serial.Serial('/dev/ttyUSB0', 115200)
 
 
 def main():
-    ser = serial.Serial('/dev/ttyUSB0', 115200)
-    
-    time.sleep(5)
-    
-    while not ser.writable():
-        pass
-    
-    ser.write(b'|')
-    while not ser.readable():
-        pass
-    
-    ax,ay,az,gx,gy,gz,mx,my,mz=ser.read_until(b'\n')[:-2].decode().split('#') 
-    ser.write(b'|')
-    
-    
-    ekf=EKF(frame='ENU',magnetic_ref=0)
-    Q = acc2q([float(ax),float(ay),float(az)])    
-
     video_flags = OPENGL | DOUBLEBUF
     pygame.init()
-    screen = pygame.display.set_mode((960, 540), video_flags)
+    screen = pygame.display.set_mode((1920, 1080), video_flags)
     pygame.display.set_caption("Aldebaran Core AHRS - MPU9255 QUATERNION")
-    resizewin(960, 540)
+    resizewin(1920, 1080)
     init()
     frames = 0
-    ticks = pygame.time.get_ticks()     
-    pTime=time.time()   
+    ticks = pygame.time.get_ticks()        
     while 1:
         event = pygame.event.poll()
         
         if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
             break
 
-        ser.write(b'|')
-        while not ser.readable():
-            pass
-        ax,ay,az,gx,gy,gz,mx,my,mz=ser.read_until(b'\n')[:-2].decode().split('#') 
-        ser.write(b'|')
-        
-        print(mx,my,mz)
+        line = ser.readline().decode('UTF-8').replace('\n', '')
+        yaw = float(line.split()[0])
+        pitch = float(line.split()[1])
+        roll = -float(line.split()[2])
 
-        cTime=time.time()
-        ekf.Dt=(cTime-pTime)
-        pTime=cTime
-
-        Q=ekf.update(Q,
-                     [float(gx),float(gy),float(gz)],
-                     [float(ax),float(ay),float(az)],
-                     [float(mx),float(my),float(mz)]
-                     )
-        
-        roll,pitch,yaw=DCM(Quaternion(Q).to_DCM()).to_angles()*RAD2DEG
-
+        pitch = pitch - 0
+        roll = roll - 0
 
         draw(1, yaw, pitch, roll)
         pygame.display.flip()
